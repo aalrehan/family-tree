@@ -7,8 +7,8 @@ const EMPTY = {
   gender: 'male',
   fatherId: null,
   motherId: null,
+  spouseId: null,
   birthYear: '',
-  deathYear: '',
   city: '',
   notes: '',
 }
@@ -39,7 +39,6 @@ export default function PersonModal({ person, allPeople, onSave, onDelete, onClo
     onSave({
       ...form,
       birthYear: form.birthYear ? Number(form.birthYear) : null,
-      deathYear: form.deathYear ? Number(form.deathYear) : null,
     })
   }
 
@@ -84,44 +83,39 @@ export default function PersonModal({ person, allPeople, onSave, onDelete, onClo
               </select>
             </label>
 
-            <ParentPicker
+            <PersonPicker
               label="الأب"
               allPeople={allPeople}
               value={form.fatherId}
               onChange={(id) => setForm((f) => ({ ...f, fatherId: id }))}
-              gender="male"
-              excludeId={form.id}
+              filter={(p) => p.id !== form.id && p.gender === 'male'}
             />
 
-            <ParentPicker
+            <PersonPicker
               label="الأم"
               allPeople={allPeople}
               value={form.motherId}
               onChange={(id) => setForm((f) => ({ ...f, motherId: id }))}
-              gender="female"
-              excludeId={form.id}
+              filter={(p) => p.id !== form.id && p.gender === 'female'}
             />
 
-            <div className="form-row">
-              <label>
-                سنة الميلاد
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={form.birthYear || ''}
-                  onChange={set('birthYear')}
-                />
-              </label>
-              <label>
-                سنة الوفاة
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={form.deathYear || ''}
-                  onChange={set('deathYear')}
-                />
-              </label>
-            </div>
+            <PersonPicker
+              label="الزوج / الزوجة"
+              allPeople={allPeople}
+              value={form.spouseId}
+              onChange={(id) => setForm((f) => ({ ...f, spouseId: id }))}
+              filter={(p) => p.id !== form.id && p.gender !== form.gender}
+            />
+
+            <label>
+              سنة الميلاد
+              <input
+                type="number"
+                inputMode="numeric"
+                value={form.birthYear || ''}
+                onChange={set('birthYear')}
+              />
+            </label>
 
             <label>
               المدينة
@@ -166,7 +160,7 @@ export default function PersonModal({ person, allPeople, onSave, onDelete, onClo
   )
 }
 
-function ParentPicker({ label, allPeople, value, onChange, gender, excludeId }) {
+function PersonPicker({ label, allPeople, value, onChange, filter }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const selected = allPeople.find((p) => p.id === value)
@@ -174,14 +168,14 @@ function ParentPicker({ label, allPeople, value, onChange, gender, excludeId }) 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return allPeople
-      .filter((p) => p.id !== excludeId && p.gender === gender)
+      .filter(filter)
       .filter((p) => {
         if (!q) return true
         const name = ((p.nameAr || '') + ' ' + (p.nameEn || '')).toLowerCase()
         return name.includes(q)
       })
       .slice(0, 20)
-  }, [allPeople, query, gender, excludeId])
+  }, [allPeople, query, filter])
 
   return (
     <label className="parent-picker">

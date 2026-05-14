@@ -11,6 +11,13 @@ function highlight(text, term) {
   )
 }
 
+function ageFromBirthYear(birthYear) {
+  if (!birthYear) return null
+  const now = new Date().getFullYear()
+  const years = now - Number(birthYear)
+  return years >= 0 && years < 150 ? years : null
+}
+
 export default function PersonCard({
   person,
   onClick,
@@ -21,22 +28,9 @@ export default function PersonCard({
   const name = person.nameAr || person.nameEn || '—'
   const initial = (name.trim()[0] || '?').toUpperCase()
   const isFemale = person.gender === 'female'
-  const isDeceased = !!person.deathYear
+  const age = ageFromBirthYear(person.birthYear)
 
-  const years = person.birthYear
-    ? person.deathYear
-      ? `${person.birthYear} – ${person.deathYear}`
-      : `${person.birthYear}`
-    : person.deathYear
-    ? `† ${person.deathYear}`
-    : ''
-
-  const cls = [
-    'person-card',
-    isFemale ? 'female' : 'male',
-    isDeceased && 'deceased',
-    dim && 'dim',
-  ]
+  const cls = ['person-card', isFemale ? 'female' : 'male', dim && 'dim']
     .filter(Boolean)
     .join(' ')
 
@@ -46,13 +40,10 @@ export default function PersonCard({
         {initial}
       </div>
       <div className="card-body">
-        <div className="card-name">
-          {isDeceased && <span className="dagger">† </span>}
-          {highlight(name, searchTerm)}
-        </div>
+        <div className="card-name">{highlight(name, searchTerm)}</div>
         <div className="card-meta">
           <span className="gender-icon">{isFemale ? '♀' : '♂'}</span>
-          {years && <span>{years}</span>}
+          {age != null && <span>العمر: {age}</span>}
           {person.city && <span>{person.city}</span>}
         </div>
         {spouseLabel && (

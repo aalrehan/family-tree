@@ -14,7 +14,8 @@ function hasParentInDataset(person, byId) {
   )
 }
 
-// Returns the set of co-parent IDs (other parent of any shared child) for a person.
+// Co-parents inferred from shared children. Used as a fallback when an explicit
+// spouse_id isn't set, so older data without spouse_id still pairs up.
 function coParentIds(person, people) {
   const ids = new Set()
   for (const c of people) {
@@ -24,17 +25,31 @@ function coParentIds(person, people) {
   return ids
 }
 
+// Ordered list of partner candidates for a person:
+//   1) explicit spouse_id (if set and valid)
+//   2) any co-parents from shared children (legacy / inferred)
+function partnerCandidates(person, people, byId) {
+  const ordered = []
+  if (person.spouseId && byId.has(person.spouseId)) {
+    ordered.push(person.spouseId)
+  }
+  for (const id of coParentIds(person, people)) {
+    if (!ordered.includes(id)) ordered.push(id)
+  }
+  return ordered
+}
+
 export function buildTree(people) {
   const byId = new Map(people.map((p) => [p.id, p]))
 
   // Pass 1: pick an "inline spouse" for each person where possible.
-  // Inline spouse = co-parent with no parents in the dataset, so they have nowhere else to render.
-  // Each person can be inlined at most once to avoid double-rendering.
+  // Inline spouse = partner with no parents in the dataset, so they have
+  // nowhere else to render. Each person can be inlined at most once.
   const inlineSpouseOf = new Map()
   const isInlinedSpouse = new Set()
   for (const p of people) {
     if (isInlinedSpouse.has(p.id)) continue
-    for (const coId of coParentIds(p, people)) {
+    for (const coId of partnerCandidates(p, people, byId)) {
       const co = byId.get(coId)
       if (!co) continue
       if (isInlinedSpouse.has(co.id)) continue
@@ -45,9 +60,9 @@ export function buildTree(people) {
     }
   }
 
-  // For "Married to: X" label when the partner is rendered in their own parents' branch.
+  // "Married to X" label when the partner renders in their own parents' branch.
   function inSystemPartnerLabel(person) {
-    for (const coId of coParentIds(person, people)) {
+    for (const coId of partnerCandidates(person, people, byId)) {
       const co = byId.get(coId)
       if (!co) continue
       if (hasParentInDataset(co, byId)) return co.nameAr || co.nameEn || ''
@@ -84,7 +99,6 @@ export function buildTree(people) {
 }
 
 // Walk the tree and return ids of nodes whose subtree contains a name match.
-// Used to auto-expand branches around search hits (and dim non-matches if we want).
 export function findMatches(forest, term) {
   if (!term) return new Set()
   const needle = term.trim().toLowerCase()

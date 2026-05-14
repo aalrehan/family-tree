@@ -12,8 +12,8 @@ const NEW_PERSON = {
   gender: 'male',
   fatherId: null,
   motherId: null,
+  spouseId: null,
   birthYear: '',
-  deathYear: '',
   city: '',
   notes: '',
 }
@@ -83,12 +83,30 @@ export default function App() {
   const onCardClick = (person) => setEditing(person)
   const onAddClick = () => setEditing({ ...NEW_PERSON })
 
+  // Bidirectional spouse_id: when A.spouseId changes, also clear the old
+  // partner's link and set the new partner's link to A. Fire-and-forget after
+  // the main save lands — realtime will sync the partner's row to other tabs.
+  const syncSpouseLink = async (personId, previousSpouseId, newSpouseId) => {
+    if (previousSpouseId === newSpouseId) return
+    if (previousSpouseId) {
+      await supabase
+        .from('people')
+        .update({ spouse_id: null })
+        .eq('id', previousSpouseId)
+        .eq('spouse_id', personId)
+    }
+    if (newSpouseId) {
+      await supabase.from('people').update({ spouse_id: personId }).eq('id', newSpouseId)
+    }
+  }
+
   const onSave = async (form) => {
     const isNew = !form.id
-    const payload = toDb({ ...form, id: form.id || crypto.randomUUID() })
+    const id = form.id || crypto.randomUUID()
+    const payload = toDb({ ...form, id })
+    const previousSpouseId = isNew ? null : people.find((p) => p.id === id)?.spouseId ?? null
 
     if (isNew) {
-      // Optimistic insert
       const optimistic = fromDb(payload)
       setPeople((p) => [...p, optimistic])
       setEditing(null)
@@ -96,21 +114,23 @@ export default function App() {
       if (error) {
         setPeople((p) => p.filter((x) => x.id !== optimistic.id))
         setToast('فشل الحفظ: ' + error.message)
-      } else {
-        setToast('تمت الإضافة')
+        return
       }
+      await syncSpouseLink(id, null, form.spouseId || null)
+      setToast('تمت الإضافة')
     } else {
-      const prev = people.find((p) => p.id === form.id)
+      const prev = people.find((p) => p.id === id)
       const optimistic = fromDb(payload)
       setPeople((p) => p.map((x) => (x.id === optimistic.id ? optimistic : x)))
       setEditing(null)
-      const { error } = await supabase.from('people').update(payload).eq('id', form.id)
+      const { error } = await supabase.from('people').update(payload).eq('id', id)
       if (error) {
         if (prev) setPeople((p) => p.map((x) => (x.id === prev.id ? prev : x)))
         setToast('فشل الحفظ: ' + error.message)
-      } else {
-        setToast('تم الحفظ')
+        return
       }
+      await syncSpouseLink(id, previousSpouseId, form.spouseId || null)
+      setToast('تم الحفظ')
     }
   }
 

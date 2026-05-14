@@ -211,11 +211,6 @@ mark {
   border-color: var(--female);
 }
 
-.person-card.deceased {
-  opacity: 0.75;
-  background: #fafafa;
-}
-
 .person-card.dim {
   opacity: 0.35;
 }
@@ -289,10 +284,6 @@ mark {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.dagger {
-  color: var(--text-soft);
 }
 
 /* ----- buttons ----- */
@@ -383,6 +374,10 @@ mark {
 
 .modal-body {
   flex: 1;
+  /* min-height: 0 is required for a flex child with overflow: auto to actually
+     shrink below its content height. Without this the body refuses to shrink,
+     the modal grows past max-height, and the footer ends up off-screen. */
+  min-height: 0;
   overflow-y: auto;
   padding: 16px 20px;
   display: flex;

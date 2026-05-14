@@ -41,6 +41,7 @@ export const fromDb = (row) => ({
   nameEn: row.name_en,
   fatherId: row.father_id,
   motherId: row.mother_id,
+  spouseId: row.spouse_id,
   gender: row.gender,
   birthYear: row.birth_year,
   deathYear: row.death_year,
@@ -49,15 +50,18 @@ export const fromDb = (row) => ({
   createdAt: row.created_at,
 })
 
+// death_year is intentionally omitted: the UI no longer collects it,
+// and leaving it out of the payload means UPDATE won't overwrite values
+// that already exist in the database from before the redesign.
 export const toDb = (person) => ({
   id: person.id,
   name_ar: person.nameAr,
   name_en: person.nameEn,
   father_id: person.fatherId || null,
   mother_id: person.motherId || null,
+  spouse_id: person.spouseId || null,
   gender: person.gender,
   birth_year: person.birthYear || null,
-  death_year: person.deathYear || null,
   city: person.city || null,
   notes: person.notes || null,
 })
